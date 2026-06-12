@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AeroHome — Security that doesn't just watch. It acts.</title>
+<style>
+  :root{
+    --navy-deep:#0A1120; --navy:#101B30; --navy-panel:#16233D; --line:#22324F;
+    --gold:#C5A05A; --gold-bright:#EBD489; --gold-soft:rgba(197,160,90,.14);
+    --paper:#EDF1F8; --slate:#8A97AC; --red:#D64541; --green:#4CAF7D;
+    --mono:ui-monospace,'SF Mono',Menlo,Consolas,monospace;
+    --sans:-apple-system,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:smooth}
+  body{font-family:var(--sans);background:var(--navy-deep);color:var(--paper);line-height:1.6;-webkit-font-smoothing:antialiased}
+  a{color:inherit;text-decoration:none}
+  .wrap{max-width:1180px;margin:0 auto;padding:0 28px}
+  .eyebrow{font-family:var(--mono);font-size:12px;letter-spacing:.22em;text-transform:uppercase;color:var(--gold);display:block;margin-bottom:14px}
+  h2{font-size:clamp(28px,3.6vw,44px);letter-spacing:-.02em;line-height:1.12;font-weight:800}
+  .lede{color:var(--slate);font-size:17px;max-width:640px;margin-top:14px}
+  section{padding:96px 0;position:relative}
+  .reveal{opacity:0;transform:translateY(22px);transition:opacity .7s ease,transform .7s ease}
+  .reveal.in{opacity:1;transform:none}
+  @media(prefers-reduced-motion:reduce){.reveal{opacity:1;transform:none;transition:none} *{animation:none!important}}
+
+  /* ---------- nav ---------- */
+  nav{position:sticky;top:0;z-index:50;background:rgba(10,17,32,.85);backdrop-filter:blur(12px);border-bottom:1px solid var(--line)}
+  .nav-in{display:flex;align-items:center;justify-content:space-between;height:72px}
+  .logo{display:flex;align-items:center;gap:12px}
+  .logo .word{font-weight:800;font-size:19px;letter-spacing:.06em}
+  .logo .word em{font-style:normal;color:var(--gold-bright)}
+  .logo .by{display:block;font-family:var(--mono);font-size:8.5px;letter-spacing:.28em;color:var(--slate)}
+  .nav-links{display:flex;gap:30px;font-size:14px;color:var(--slate)}
+  .nav-links a:hover{color:var(--paper)}
+  .btn{display:inline-block;background:var(--gold);color:var(--navy-deep);font-weight:800;padding:13px 26px;border-radius:8px;font-size:15px;letter-spacing:.01em;transition:transform .15s ease,background .15s ease}
+  .btn:hover{background:var(--gold-bright);transform:translateY(-1px)}
+  .btn.ghost{background:transparent;color:var(--paper);border:1.5px solid var(--line)}
+  .btn.ghost:hover{border-color:var(--gold);color:var(--gold-bright)}
+  .btn.sm{padding:9px 18px;font-size:13.5px}
+  @media(max-width:760px){.nav-links{display:none}}
+
+  /* ---------- hero ---------- */
+  .hero{padding:90px 0 70px;overflow:hidden}
+  .hero .wrap{display:grid;grid-template-columns:1.05fr .95fr;gap:50px;align-items:center}
+  h1{font-size:clamp(38px,5.2vw,64px);line-height:1.04;letter-spacing:-.03em;font-weight:800}
+  h1 .gold{color:var(--gold-bright)}
+  .hero p{color:var(--slate);font-size:18px;margin:22px 0 30px;max-width:520px}
+  .hero-ctas{display:flex;gap:14px;flex-wrap:wrap}
+  .hero-note{font-family:var(--mono);font-size:11.5px;color:var(--slate);margin-top:18px;letter-spacing:.04em}
+  .hero-note b{color:var(--green)}
+  @media(max-width:880px){.hero .wrap{grid-template-columns:1fr}}
+
+  /* orbit visual */
+  .orbit-stage{position:relative;aspect-ratio:1/1;max-width:480px;margin:0 auto;width:100%}
+  .radar{position:absolute;inset:0;border-radius:50%;border:1px solid var(--line);}
+  .radar.r2{inset:13%}.radar.r3{inset:26%}
+  .sweep{position:absolute;inset:0;border-radius:50%;overflow:hidden}
+  .sweep::before{content:"";position:absolute;left:50%;top:50%;width:50%;height:50%;transform-origin:0 0;
+    background:conic-gradient(from 0deg,rgba(197,160,90,.28),transparent 70deg);animation:spin 6s linear infinite}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .house-svg{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:42%}
+  .path-ellipse{position:absolute;left:50%;top:50%;width:84%;height:60%;transform:translate(-50%,-50%);
+    border:2px dotted var(--gold);border-radius:50%}
+  .drone{position:absolute;left:50%;top:50%;width:84%;height:60%;transform:translate(-50%,-50%);animation:orbit 9s linear infinite}
+  @keyframes orbit{to{transform:translate(-50%,-50%) rotate(360deg)}}
+  .drone i{position:absolute;left:-7px;top:50%;width:16px;height:16px;border-radius:50%;background:var(--gold-bright);
+    box-shadow:0 0 18px rgba(235,212,137,.8);border:2px solid var(--navy-deep)}
+  .tagchip{position:absolute;font-family:var(--mono);font-size:10px;letter-spacing:.12em;color:var(--slate);
+    border:1px solid var(--line);background:rgba(16,27,48,.9);padding:5px 10px;border-radius:99px}
+  .tc1{top:6%;left:0}.tc2{bottom:10%;right:0}.tc3{top:44%;right:-2%}
+
+  /* ---------- stat strip ---------- */
+  .stats{background:var(--navy);border-top:1px solid var(--line);border-bottom:1px solid var(--line);padding:54px 0}
+  .stat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:26px}
+  .stat .num{font-size:clamp(28px,3vw,40px);font-weight:800;color:var(--gold-bright);letter-spacing:-.02em}
+  .stat .lbl{color:var(--slate);font-size:13.5px;margin-top:6px}
+  .stat-src{font-family:var(--mono);font-size:10px;color:#5A6880;margin-top:26px;letter-spacing:.06em}
+  @media(max-width:760px){.stat-grid{grid-template-columns:repeat(2,1fr)}}
+
+  /* ---------- compare ---------- */
+  .compare-grid{display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-top:46px}
+  .cmp{border:1px solid var(--line);border-radius:14px;padding:30px;background:var(--navy)}
+  .cmp.active{border-color:var(--gold);background:linear-gradient(180deg,var(--gold-soft),var(--navy))}
+  .cmp h3{font-size:20px;margin-bottom:6px}
+  .cmp .tag{font-family:var(--mono);font-size:10.5px;letter-spacing:.18em;text-transform:uppercase}
+  .cmp.passive .tag{color:var(--slate)}.cmp.active .tag{color:var(--gold-bright)}
+  .cmp ul{list-style:none;margin-top:18px}
+  .cmp li{padding:9px 0;border-top:1px solid var(--line);color:var(--slate);font-size:14.5px;display:flex;gap:10px}
+  .cmp.active li{color:var(--paper)}
+  .cmp li::before{content:"✕";color:#5A6880;font-weight:700;flex:none}
+  .cmp.active li::before{content:"✓";color:var(--gold-bright)}
+  @media(max-width:760px){.compare-grid{grid-template-columns:1fr}}
+
+  /* ---------- ladder ---------- */
+  .ladder{counter-reset:step;display:grid;grid-template-columns:repeat(3,1fr);gap:22px;margin-top:46px}
+  .step{border:1px solid var(--line);border-radius:14px;padding:26px;background:var(--navy);position:relative}
+  .step::before{counter-increment:step;content:"0" counter(step);font-family:var(--mono);font-size:13px;color:var(--gold);letter-spacing:.1em}
+  .step h3{font-size:18px;margin:10px 0 8px}
+  .step p{color:var(--slate);font-size:14px}
+  .step.hot{border-color:var(--gold)}
+  @media(max-width:880px){.ladder{grid-template-columns:1fr}}
+
+  /* ---------- products ---------- */
+  .prods{display:grid;grid-template-columns:repeat(3,1fr);gap:24px;margin-top:46px}
+  .prod{border:1px solid var(--line);border-radius:16px;background:var(--navy);overflow:hidden;display:flex;flex-direction:column}
+  .prod .art{height:190px;display:flex;align-items:center;justify-content:center;background:
+    radial-gradient(ellipse at 50% 120%,var(--gold-soft),transparent 65%),var(--navy-panel);border-bottom:1px solid var(--line)}
+  .prod .body{padding:26px;flex:1;display:flex;flex-direction:column}
+  .prod .name{font-size:20px;font-weight:800}
+  .prod .role{font-family:var(--mono);font-size:10.5px;letter-spacing:.18em;text-transform:uppercase;color:var(--gold);margin:4px 0 12px}
+  .prod p{color:var(--slate);font-size:14px;flex:1}
+  .prod .specs{margin-top:16px;font-family:var(--mono);font-size:11px;color:var(--slate);line-height:2;border-top:1px solid var(--line);padding-top:12px}
+  .prod .specs b{color:var(--paper);font-weight:600}
+  @media(max-width:880px){.prods{grid-template-columns:1fr}}
+
+  /* ---------- family ---------- */
+  .family{background:var(--navy);border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+  .fam-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:22px;margin-top:46px}
+  .fam{border:1px solid var(--line);border-radius:14px;padding:24px;background:var(--navy-deep)}
+  .fam .ic{width:42px;height:42px;border-radius:10px;background:var(--gold-soft);border:1px solid var(--gold);
+    display:flex;align-items:center;justify-content:center;font-size:20px;margin-bottom:14px}
+  .fam h3{font-size:16px;margin-bottom:6px}
+  .fam p{color:var(--slate);font-size:13.5px}
+  @media(max-width:880px){.fam-grid{grid-template-columns:repeat(2,1fr)}}
+  @media(max-width:560px){.fam-grid{grid-template-columns:1fr}}
+
+  /* ---------- privacy ---------- */
+  .priv-grid{display:grid;grid-template-columns:1fr 1fr;gap:50px;align-items:center}
+  .priv-list{list-style:none;margin-top:26px}
+  .priv-list li{padding:14px 0;border-top:1px solid var(--line);display:flex;gap:14px;font-size:15px}
+  .priv-list li b{display:block}
+  .priv-list li span{color:var(--slate);font-size:13.5px}
+  .priv-list .dot{flex:none;width:10px;height:10px;border-radius:50%;background:var(--gold-bright);margin-top:7px}
+  .shield{max-width:340px;margin:0 auto;display:block}
+  @media(max-width:880px){.priv-grid{grid-template-columns:1fr}}
+
+  /* ---------- pricing ---------- */
+  .plans{display:grid;grid-template-columns:repeat(3,1fr);gap:24px;margin-top:46px}
+  .plan{border:1px solid var(--line);border-radius:16px;padding:30px;background:var(--navy);display:flex;flex-direction:column}
+  .plan.hot{border-color:var(--gold);background:linear-gradient(180deg,var(--gold-soft),var(--navy));position:relative}
+  .plan .pop{position:absolute;top:-12px;left:50%;transform:translateX(-50%);background:var(--gold);color:var(--navy-deep);
+    font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:.14em;padding:4px 12px;border-radius:99px}
+  .plan h3{font-size:19px}
+  .plan .price{font-size:36px;font-weight:800;margin:10px 0 2px}
+  .plan .price small{font-size:14px;color:var(--slate);font-weight:400}
+  .plan ul{list-style:none;margin:20px 0;flex:1}
+  .plan li{padding:8px 0;border-top:1px solid var(--line);color:var(--slate);font-size:14px}
+  .plan li::before{content:"✓  ";color:var(--gold-bright);font-weight:700}
+  .hw-note{margin-top:26px;text-align:center;color:var(--slate);font-size:14px}
+  .hw-note b{color:var(--paper)}
+  @media(max-width:880px){.plans{grid-template-columns:1fr}}
+
+  /* ---------- cta ---------- */
+  .final{text-align:center;padding:110px 0}
+  .final h2{font-size:clamp(30px,4.4vw,52px)}
+  .final p{color:var(--slate);margin:18px auto 32px;max-width:560px}
+  .waitform{display:flex;gap:12px;max-width:480px;margin:0 auto;flex-wrap:wrap;justify-content:center}
+  .waitform input{flex:1;min-width:240px;background:var(--navy);border:1.5px solid var(--line);border-radius:8px;
+    padding:13px 16px;color:var(--paper);font-size:15px;outline:none}
+  .waitform input:focus{border-color:var(--gold)}
+
+  footer{border-top:1px solid var(--line);padding:46px 0;color:var(--slate);font-size:13px}
+  .foot-in{display:flex;justify-content:space-between;gap:30px;flex-wrap:wrap;align-items:center}
+  .foot-links{display:flex;gap:24px}
+  .foot-links a:hover{color:var(--paper)}
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="wrap nav-in">
+    <a class="logo" href="#top" aria-label="AeroHome home">
+      <img src="assets/aeroassist-mark.png" alt="AeroAssist logo" style="height:40px;width:auto">
+      <span><span class="word">AERO<em>HOME</em></span><span class="by">BY AEROASSIST INDUSTRIES</span></span>
+    </a>
+    <div class="nav-links">
+      <a href="#how">How it works</a>
+      <a href="#products">The system</a>
+      <a href="#family">Family</a>
+      <a href="#privacy">Privacy</a>
+      <a href="#plans">Plans</a>
+    </div>
+    <a class="btn sm" href="#waitlist">Join the waitlist</a>
+  </div>
+</nav>
+
+<header class="hero" id="top">
+  <div class="wrap">
+    <div>
+      <span class="eyebrow">Autonomous Drone + Robot Home Security</span>
+      <h1>Security that doesn't just watch.<br><span class="gold">It acts.</span></h1>
+      <p>A patrol drone in your backyard sweeps the entire perimeter — 360°, day or night. A quiet robot inside checks every room. Together they verify real threats, deter intruders before a door is touched, and keep everyone in your home safe.</p>
+      <div class="hero-ctas">
+        <a class="btn" href="#waitlist">Join the waitlist</a>
+        <a class="btn ghost" href="#how">See how it works</a>
+      </div>
+      <div class="hero-note"><b>●</b> PILOT PROGRAM — DALLAS–FORT WORTH & PHOENIX · LAUNCHING 2026</div>
+    </div>
+    <div class="orbit-stage" aria-label="Animated illustration of the Sentinel drone patrolling a home perimeter">
+      <div class="radar"></div><div class="radar r2"></div><div class="radar r3"></div>
+      <div class="sweep"></div>
+      <div class="path-ellipse"></div>
+      <svg class="house-svg" viewBox="0 0 120 100" fill="none">
+        <path d="M60 8 L112 50 H96 V94 H24 V50 H8 Z" stroke="#EDF1F8" stroke-width="3" stroke-linejoin="round" fill="#101B30"/>
+        <rect x="52" y="62" width="16" height="32" stroke="#8A97AC" stroke-width="2"/>
+        <rect x="32" y="58" width="12" height="12" stroke="#8A97AC" stroke-width="2"/>
+        <rect x="76" y="58" width="12" height="12" stroke="#8A97AC" stroke-width="2"/>
+        <circle cx="60" cy="80" r="3" fill="#C5A05A"/>
+      </svg>
+      <div class="drone"><i></i></div>
+      <span class="tagchip tc1">SENTINEL · ALT 32 FT</span>
+      <span class="tagchip tc2">GUARDIAN · ENTRY HALL</span>
+      <span class="tagchip tc3">PERIMETER ✓</span>
+    </div>
+  </div>
+</header>
+
+<div class="stats">
+  <div class="wrap">
+    <div class="stat-grid">
+      <div class="stat reveal"><div class="num">41 sec</div><div class="lbl">A burglary happens in the U.S. roughly every 41 seconds — over 2,000 a day.</div></div>
+      <div class="stat reveal"><div class="num">~12%</div><div class="lbl">Share of burglaries police ever solve. Prevention is the only real protection.</div></div>
+      <div class="stat reveal"><div class="num">83%</div><div class="lbl">Of burglars check for security before attempting entry — most abandon a protected home.</div></div>
+      <div class="stat reveal"><div class="num">300%</div><div class="lbl">Higher likelihood of break-in for homes without a security system.</div></div>
+    </div>
+    <div class="stat-src">SOURCES: FBI UNIFORM CRIME REPORTING (2024) · PEW RESEARCH · UNC CHARLOTTE OFFENDER STUDIES · ALARMS.ORG</div>
+  </div>
+</div>
+
+<section id="why">
+  <div class="wrap">
+    <span class="eyebrow reveal">Why AeroHome</span>
+    <h2 class="reveal">Your cameras record crimes.<br>They don't prevent them.</h2>
+    <p class="lede reveal">Fixed cameras have fixed blind spots, and alarms only sound after someone is already inside. AeroHome was built on one idea: stop the break-in before it starts.</p>
+    <div class="compare-grid">
+      <div class="cmp passive reveal">
+        <span class="tag">Traditional security</span>
+        <h3>Passive. Reactive. Blind spots.</h3>
+        <ul>
+          <li>Fixed cameras watch the same angles an intruder learns in minutes</li>
+          <li>Alarm sounds after the door or window is breached</li>
+          <li>Unverified motion alerts you learn to ignore</li>
+          <li>Footage becomes evidence of a crime that already happened</li>
+        </ul>
+      </div>
+      <div class="cmp active reveal">
+        <span class="tag">AeroHome active security</span>
+        <h3>Mobile. Verified. Deterrent.</h3>
+        <ul>
+          <li>Drone investigates any sound or sensor trigger — anywhere on the property</li>
+          <li>AI verifies a real person before you're ever woken up</li>
+          <li>Spotlight, voice challenge, and sirens confront intruders at the fence line</li>
+          <li>Verified live video gets priority emergency dispatch</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="how" style="padding-top:30px">
+  <div class="wrap">
+    <span class="eyebrow reveal">The Response Ladder</span>
+    <h2 class="reveal">From first sound to all-clear,<br>in six steps.</h2>
+    <div class="ladder">
+      <div class="step reveal"><h3>Detect</h3><p>A sensor, sound, or camera detection — a person at the fence at 2 a.m. — creates a candidate event.</p></div>
+      <div class="step reveal"><h3>Investigate</h3><p>Sentinel launches to the exact zone. Guardian rolls to the room. Eyes on target in seconds.</p></div>
+      <div class="step reveal"><h3>Verify</h3><p>On-device AI confirms person, vehicle, animal, or package. Raccoons never wake you. People do.</p></div>
+      <div class="step hot reveal"><h3>Deter</h3><p>Spotlight locks on. A voice challenge announces police contact. Most intruders abandon the attempt right here.</p></div>
+      <div class="step hot reveal"><h3>Escalate</h3><p>Live verified video to you and our 24/7 monitoring agents. One-tap 911 with your address and a live-feed link.</p></div>
+      <div class="step reveal"><h3>Document</h3><p>Multi-angle 4K and thermal record, auto-packaged for police and your insurance claim.</p></div>
+    </div>
+  </div>
+</section>
+
+<section id="products" style="padding-top:30px">
+  <div class="wrap">
+    <span class="eyebrow reveal">The System</span>
+    <h2 class="reveal">Three guardians. One brain.</h2>
+    <div class="prods">
+      <div class="prod reveal">
+        <div class="art">
+          <svg width="130" height="110" viewBox="0 0 130 110" fill="none">
+            <ellipse cx="65" cy="92" rx="44" ry="9" fill="#0A1120"/>
+            <rect x="30" y="74" width="70" height="18" rx="6" stroke="#C5A05A" stroke-width="2.5" fill="#101B30"/>
+            <path d="M50 50 h30 l8 8 h-46 z" fill="#16233D" stroke="#EDF1F8" stroke-width="2.5"/>
+            <circle cx="40" cy="46" r="9" stroke="#EBD489" stroke-width="2.5"/>
+            <circle cx="90" cy="46" r="9" stroke="#EBD489" stroke-width="2.5"/>
+            <line x1="46" y1="51" x2="54" y2="55" stroke="#EDF1F8" stroke-width="2.5"/>
+            <line x1="84" y1="51" x2="76" y2="55" stroke="#EDF1F8" stroke-width="2.5"/>
+            <circle cx="65" cy="60" r="4" fill="#C5A05A"/>
+          </svg>
+        </div>
+        <div class="body">
+          <div class="name">Sentinel</div>
+          <div class="role">Outdoor Patrol Drone</div>
+          <p>Lives in its weatherproof Nest dock in the backyard. On schedule, on trigger, or on demand, it flies a 360° sweep of your home's perimeter — streaming stabilized 4K with thermal night vision, spotlight, and two-way audio.</p>
+          <div class="specs"><b>4K + thermal</b> · 8× zoom · 1,200 lm spotlight<br><b>3–6 min</b> full perimeter sweep · self-charging<br><b>Geofenced</b> to your property · fully autonomous</div>
+        </div>
+      </div>
+      <div class="prod reveal">
+        <div class="art">
+          <svg width="110" height="110" viewBox="0 0 110 110" fill="none">
+            <ellipse cx="55" cy="98" rx="36" ry="7" fill="#0A1120"/>
+            <rect x="25" y="70" width="60" height="24" rx="10" stroke="#EDF1F8" stroke-width="2.5" fill="#101B30"/>
+            <circle cx="38" cy="94" r="6" fill="#16233D" stroke="#8A97AC" stroke-width="2"/>
+            <circle cx="72" cy="94" r="6" fill="#16233D" stroke="#8A97AC" stroke-width="2"/>
+            <line x1="55" y1="70" x2="55" y2="34" stroke="#C5A05A" stroke-width="2.5"/>
+            <rect x="44" y="18" width="22" height="16" rx="5" stroke="#EBD489" stroke-width="2.5" fill="#101B30"/>
+            <circle cx="55" cy="26" r="3.5" fill="#C5A05A"/>
+          </svg>
+        </div>
+        <div class="body">
+          <div class="name">Guardian</div>
+          <div class="role">Indoor Safety Robot</div>
+          <p>A whisper-quiet rover that patrols inside, visually verifies every door and window on its goodnight sweep, investigates sounds, listens for smoke and glass-break — and lets you say goodnight to the kids from anywhere.</p>
+          <div class="specs"><b>Room-to-room</b> self-navigation · rising mast cam<br><b>Two-way video</b> · siren + strobe deterrence<br><b>Physical shutter</b> · bedrooms off-limits by default</div>
+        </div>
+      </div>
+      <div class="prod reveal">
+        <div class="art">
+          <svg width="100" height="110" viewBox="0 0 100 110" fill="none">
+            <ellipse cx="50" cy="98" rx="30" ry="6" fill="#0A1120"/>
+            <rect x="26" y="22" width="48" height="72" rx="12" stroke="#EDF1F8" stroke-width="2.5" fill="#101B30"/>
+            <circle cx="50" cy="46" r="11" stroke="#C5A05A" stroke-width="2.5"/>
+            <circle cx="50" cy="46" r="3.5" fill="#EBD489"/>
+            <line x1="38" y1="68" x2="62" y2="68" stroke="#22324F" stroke-width="3" stroke-linecap="round"/>
+            <line x1="38" y1="78" x2="62" y2="78" stroke="#22324F" stroke-width="3" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <div class="body">
+          <div class="name">Hub</div>
+          <div class="role">The Brain</div>
+          <p>Coordinates both machines with your door and window sensors, locks, and lights. Runs threat-verification AI on-device — your footage stays home — with cellular and battery backup so cutting the power cuts nothing.</p>
+          <div class="specs"><b>On-device AI</b> · person / vehicle / animal / package<br><b>Cellular + battery</b> backup · local recording<br><b>Works with</b> existing locks, lights & sensors</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="family" id="family">
+  <div class="wrap">
+    <span class="eyebrow reveal">More Than Security</span>
+    <h2 class="reveal">Built to keep an eye on what matters —<br>the people inside.</h2>
+    <p class="lede reveal">Break-ins are rare. Caring about your family is daily. AeroHome watches over both.</p>
+    <div class="fam-grid">
+      <div class="fam reveal"><div class="ic">🎒</div><h3>Arrival assurance</h3><p>A short clip and a locked-door confirmation the moment the kids get home from school.</p></div>
+      <div class="fam reveal"><div class="ic">👵</div><h3>Elder Watch</h3><p>Gentle routine-based check-ins for aging parents — with a two-way video visit from Guardian when something seems off.</p></div>
+      <div class="fam reveal"><div class="ic">🐾</div><h3>Pet check-ins</h3><p>Find the dog, see what the cat knocked over, and say hi out loud — from anywhere.</p></div>
+      <div class="fam reveal"><div class="ic">🌙</div><h3>Goodnight sweep</h3><p>Guardian visually verifies every door and window before bed and reports a simple checklist: all secure.</p></div>
+    </div>
+  </div>
+</section>
+
+<section id="privacy">
+  <div class="wrap priv-grid">
+    <div>
+      <span class="eyebrow reveal">Privacy by Design</span>
+      <h2 class="reveal">Your footage.<br>Your rules. Period.</h2>
+      <ul class="priv-list">
+        <li class="reveal"><span class="dot"></span><div><b>AI runs in your home, not our cloud.</b><span>Threat verification happens on the Hub. Footage is end-to-end encrypted.</span></div></li>
+        <li class="reveal"><span class="dot"></span><div><b>No silent police access. Ever.</b><span>Footage is shared with law enforcement only when you export it — or under a warrant, with notice to you where lawful.</span></div></li>
+        <li class="reveal"><span class="dot"></span><div><b>Bedrooms are off-limits by default.</b><span>Guardian's no-go zones are enforced on the device, and its camera shutter is physical and visible.</span></div></li>
+        <li class="reveal"><span class="dot"></span><div><b>Neighbors stay out of frame.</b><span>Sentinel never crosses your property line, and anything beyond it is auto-blurred at capture.</span></div></li>
+      </ul>
+    </div>
+    <svg class="shield reveal" viewBox="0 0 200 230" fill="none" aria-hidden="true">
+      <path d="M100 12 L180 44 V118 C180 168 146 202 100 218 C54 202 20 168 20 118 V44 Z" stroke="#C5A05A" stroke-width="3" fill="#101B30"/>
+      <path d="M100 34 L160 58 V116 C160 154 134 180 100 194 C66 180 40 154 40 116 V58 Z" stroke="#22324F" stroke-width="2" stroke-dasharray="4 6"/>
+      <path d="M100 70 L138 100 H128 V138 H72 V100 H62 Z" stroke="#EDF1F8" stroke-width="3" stroke-linejoin="round"/>
+      <circle cx="100" cy="118" r="5" fill="#EBD489"/>
+    </svg>
+  </div>
+</section>
+
+<section id="plans" style="padding-top:30px">
+  <div class="wrap">
+    <span class="eyebrow reveal">Plans</span>
+    <h2 class="reveal">Protection that pays you back.</h2>
+    <p class="lede reveal">Many insurers discount premiums 5–15% for verified, monitored systems. Your plan may cost less than you think.</p>
+    <div class="plans">
+      <div class="plan reveal">
+        <h3>Essential</h3>
+        <div class="price">$19.99<small>/mo</small></div>
+        <ul>
+          <li>AI threat verification</li>
+          <li>Live patrols & app control</li>
+          <li>30-day encrypted video history</li>
+          <li>Self-monitoring & smart alerts</li>
+        </ul>
+        <a class="btn ghost" href="#waitlist">Choose Essential</a>
+      </div>
+      <div class="plan hot reveal">
+        <span class="pop">MOST POPULAR</span>
+        <h3>Plus</h3>
+        <div class="price">$34.99<small>/mo</small></div>
+        <ul>
+          <li>Everything in Essential</li>
+          <li>Smart deterrence automations</li>
+          <li>Family safety suite & Elder Watch</li>
+          <li>60-day video & incident reports</li>
+          <li>Extended hardware warranty</li>
+        </ul>
+        <a class="btn" href="#waitlist">Choose Plus</a>
+      </div>
+      <div class="plan reveal">
+        <h3>Total</h3>
+        <div class="price">$59.99<small>/mo</small></div>
+        <ul>
+          <li>Everything in Plus</li>
+          <li>24/7 professional monitoring</li>
+          <li>Agent voice-down deterrence</li>
+          <li>Verified priority dispatch</li>
+          <li>Hardware replacement guarantee</li>
+          <li>Insurance documentation pack</li>
+        </ul>
+        <a class="btn ghost" href="#waitlist">Choose Total</a>
+      </div>
+    </div>
+    <p class="hw-note reveal">Hardware from <b>$999</b> (Guardian Kit) · <b>$1,499</b> (Sentinel Kit) · <b>$2,499</b> (AeroHome Complete) — or bundle hardware + Total from <b>$69/mo</b> with financing.</p>
+  </div>
+</section>
+
+<section class="final" id="waitlist">
+  <div class="wrap">
+    <span class="eyebrow reveal">Pilot Program · 2026</span>
+    <h2 class="reveal">Be one of the first 500 homes.</h2>
+    <p class="reveal">AeroHome launches in Dallas–Fort Worth and Phoenix. Waitlist members get priority installation, founder pricing, and 60 days of Total monitoring free.</p>
+    <div class="waitform reveal">
+      <input type="email" placeholder="you@email.com" aria-label="Email address">
+      <a class="btn" href="#">Request early access</a>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap foot-in">
+    <div class="logo">
+      <img src="assets/aeroassist-lockup.png" alt="AeroAssist Industries" style="height:74px;width:auto">
+    </div>
+    <div class="foot-links">
+      <a href="#privacy">Privacy</a><a href="#">Transparency report</a><a href="#">Press</a><a href="#">Contact</a>
+    </div>
+    <div>© 2026 AeroHome, a subsidiary of AeroAssist Industries LLC. Crime statistics: FBI UCR & cited studies. AeroHome is a deterrence aid, not a guarantee of safety.</div>
+  </div>
+</footer>
+
+<script>
+  const io = new IntersectionObserver(es => es.forEach(e => { if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); } }), { threshold: .15 });
+  document.querySelectorAll('.reveal').forEach(el => io.observe(el));
+</script>
+</body>
+</html>
